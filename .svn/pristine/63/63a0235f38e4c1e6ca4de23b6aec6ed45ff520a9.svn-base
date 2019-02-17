@@ -1,0 +1,9 @@
+function fillZero (str, need_len) {
+    var str_re = String(str)
+    var length = str_re.length;
+    for (var i = (need_len - length); i--; i> 0 ) {
+        str_re =  '0' + str_re
+    }
+    return str_re
+}
+module.exports.fillZero = fillZero

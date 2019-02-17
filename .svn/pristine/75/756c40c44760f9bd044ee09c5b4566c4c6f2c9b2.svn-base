@@ -1,0 +1,79 @@
+var express = require('express');
+var router = express.Router();
+var net = require("net");
+var commondef = require('../public/javascripts/common')
+
+/* 创建TCP客户端 */
+var client = net.Socket();
+
+/* GET home page. */
+router.get('/', function(req, res, next) {
+    res.render('index', { title: 'Express' });
+});
+
+/* 设置连接的服务器 */
+client.connect(1220, '192.168.1.104', function () {
+    console.log("connect the server");
+    let bytes1 = Buffer.alloc(4).fill('77aa77aa','hex')
+    let devid = commondef.fillZero('1001', 32);
+    let bytes5_content = `<?xml version="1.0"?>
+        <Vehicle>
+        <DevID>${devid}</DevID>
+        </Vehicle>`
+
+    console.log(bytes5_content)
+    let bytes2 = Buffer.alloc(4).fill(commondef.fillZero(8 + bytes5_content.length, 8), 'hex');
+    console.log('bytes2', bytes2)
+    let bytes3 = Buffer.alloc(4).fill(commondef.fillZero(2, 8), 'hex');
+    console.log('bytes3', bytes3)
+    let bytes4 = Buffer.alloc(4).fill(commondef.fillZero(101, 8), 'hex');
+    console.log('bytes4', bytes4)
+    let bytes5 = Buffer.concat([Buffer.alloc(4).fill(commondef.fillZero(bytes5_content.length, 8), 'hex'), Buffer.from(bytes5_content), Buffer.alloc(4).fill(commondef.fillZero(0, 8), 'hex')]);
+    console.log('bytes5', bytes5)
+    let bytes6 = Buffer.alloc(4).fill('77ab77ab','hex');
+    console.log('bytes6', bytes6)
+    let heartbeat = Buffer.concat([bytes1, bytes2, bytes3, bytes4, bytes5, bytes6]);
+    var timerToken = setInterval(function () {
+      // let buf = Buffer.from([0x77, 0xaa, 0x77, 0xaa , 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x65, 0x00, 0x01, 0xe2, 0x40, 0x77, 0xab, 0x77, 0xab])
+
+      client.write(heartbeat);
+      console.log('心跳包', heartbeat);
+    },5000);
+    router.post('/*', function(req, res, next) {
+        console.log(req.body)
+
+        let data = `<?xml version="1.0"?>
+        <Vehicle>
+        <CamID>1</CamID>
+        <RecordID>01</RecordID>
+        <TollgateID>1</TollgateID>
+        <PassTime>20190124135538333</PassTime>
+        <LaneID>1</LaneID>
+        <PlateStatus>浙A12345</PlateStatus>
+        <PlateColor>2</PlateColor>
+        <PlateNumber>1</PlateNumber>
+        <PicNumber>0</PicNumber>
+        <DealTag>1</DealTag>
+        <IdentifyStatus>1</IdentifyStatus>
+        </Vehicle>`
+        let buf_head = Buffer.alloc(4, '77aa77aa');
+        let buf_tail = Buffer.alloc(4, '77ab77ab');
+        let length = 4 + data.length
+        data.length + data + '00000000'
+        /* 向服务器发送数据 */
+        client.write("message from client");
+
+    });
+})
+
+/* 监听服务器传来的data数据 */
+client.on("data", function (data) {
+    console.log("the data of server is " + data.toString());
+})
+
+/* 监听end事件 */
+client.on("end", function () {
+    console.log("data end");
+})
+
+module.exports = router;
